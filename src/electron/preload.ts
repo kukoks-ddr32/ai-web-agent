@@ -25,4 +25,16 @@ contextBridge.exposeInMainWorld("api", {
   onStart: (callback: () => void) => {
     ipcRenderer.on("start", () => callback());
   },
+
+  // Settings persistence
+  loadSettings: (): Promise<Record<string, string>> => ipcRenderer.invoke("load-settings"),
+  saveSettings: (settings: Record<string, string>) => ipcRenderer.send("save-settings", settings),
+
+  // Test connection
+  testConnection: (config: {
+    provider: string;
+    apiKey: string;
+    baseURL: string;
+    model: string;
+  }): Promise<{ success: boolean; message: string }> => ipcRenderer.invoke("test-connection", config),
 });

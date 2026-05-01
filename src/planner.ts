@@ -10,9 +10,11 @@ import {
  */
 export class Planner {
   private provider: LLMProvider;
+  private log: (msg: string) => void;
 
-  constructor(provider: LLMProvider) {
+  constructor(provider: LLMProvider, log?: (msg: string) => void) {
     this.provider = provider;
+    this.log = log || console.error;
   }
 
   async plan(
@@ -33,7 +35,7 @@ export class Planner {
     try {
       text = await this.provider.chat(systemPrompt, userPrompt, 2048);
     } catch (err: any) {
-      console.error("[PLANNER] API call failed:", err.message || err);
+      this.log(`[ERROR] API call failed: ${err.message || err}`);
       return {
         thinking: `API error: ${err.message}`,
         actions: [{ action: "wait", ms: 2000 }],
@@ -41,7 +43,7 @@ export class Planner {
     }
 
     if (!text) {
-      console.error("[PLANNER] Empty response from provider");
+      this.log("[ERROR] Empty response from provider");
     }
     return this.parseResponse(text);
   }

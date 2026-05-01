@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
   <title>AI Web Agent</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -27,9 +27,35 @@
       <label for="model">Model</label>
       <input type="text" id="model" placeholder="gpt-4o" value="gpt-4o">
 
+      <button class="btn-test" id="testBtn">Test Connection</button>
+      <div class="test-result hidden" id="testResult"></div>
+
       <div class="sidebar-footer">
         <div class="status" id="status">Ready</div>
       </div>
+
+      <!-- Tutorial -->
+      <details class="tutorial">
+        <summary>How to Use</summary>
+        <div class="tutorial-content">
+          <p><strong>1. Select Provider</strong></p>
+          <p>Choose OpenAI or Anthropic as your LLM provider.</p>
+
+          <p><strong>2. Enter API Key</strong></p>
+          <p>Paste your API key. Use "Test Connection" to verify it works.</p>
+
+          <p><strong>3. Set Model</strong></p>
+          <p>Default models: gpt-4o (OpenAI) / claude-sonnet-4-20250514 (Anthropic). You can change to any supported model.</p>
+
+          <p><strong>4. Enter Task</strong></p>
+          <p>Type a natural language instruction in the top bar, e.g. "Open Baidu and search for AI news".</p>
+
+          <p><strong>5. Click Start</strong></p>
+          <p>The AI will control the browser automatically. Watch the logs and screenshots in real-time.</p>
+
+          <p class="tutorial-note">Settings are saved automatically and persist between sessions.</p>
+        </div>
+      </details>
     </aside>
 
     <!-- Main Content -->

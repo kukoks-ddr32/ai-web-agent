@@ -29,9 +29,10 @@ export class Agent {
 
   constructor(config: AgentConfig, events?: AgentEvents) {
     this.config = config;
-    this.planner = new Planner(createProvider(config));
-    this.safety = new SafetyGuard(config);
     this.events = events || {};
+    const logFn = (msg: string) => this.log(msg);
+    this.planner = new Planner(createProvider(config), logFn);
+    this.safety = new SafetyGuard(config);
   }
 
   async run(goal: string): Promise<AgentRunResult> {

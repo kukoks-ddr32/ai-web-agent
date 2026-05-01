@@ -8,6 +8,8 @@ const baseURLLabelEl = $("baseURLLabel");
 const modelEl = $("model");
 const goalInput = $("goalInput");
 const runBtn = $("runBtn");
+const testBtn = $("testBtn");
+const testResult = $("testResult");
 const logPanel = $("logPanel");
 const screenshotGallery = $("screenshotGallery");
 const screenshotPanel = $("screenshotPanel");
@@ -15,6 +17,49 @@ const resultBar = $("resultBar");
 const resultIcon = $("resultIcon");
 const resultText = $("resultText");
 const statusEl = $("status");
+
+// ── Settings persistence ─────────────────────────────
+
+function collectSettings() {
+  return {
+    provider: providerEl.value,
+    apiKey: apiKeyEl.value,
+    baseURL: baseURLEl.value,
+    model: modelEl.value,
+  };
+}
+
+function applySettings(s) {
+  if (s.provider) providerEl.value = s.provider;
+  if (s.apiKey) apiKeyEl.value = s.apiKey;
+  if (s.baseURL) baseURLEl.value = s.baseURL;
+  if (s.model) modelEl.value = s.model;
+  // Trigger provider UI update
+  providerEl.dispatchEvent(new Event("change"));
+}
+
+function autoSave() {
+  window.api.saveSettings(collectSettings());
+}
+
+// Debounced save on input change
+let saveTimer = null;
+function debounceSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(autoSave, 500);
+}
+
+[providerEl, apiKeyEl, baseURLEl, modelEl].forEach((el) => {
+  el.addEventListener("input", debounceSave);
+  el.addEventListener("change", debounceSave);
+});
+
+// Load settings on startup
+window.api.loadSettings().then((settings) => {
+  if (settings && Object.keys(settings).length > 0) {
+    applySettings(settings);
+  }
+});
 
 // ── Provider switch ──────────────────────────────────
 
@@ -25,15 +70,51 @@ providerEl.addEventListener("change", () => {
     apiKeyEl.placeholder = "sk-ant-...";
     baseURLEl.style.display = "none";
     baseURLLabelEl.style.display = "none";
-    modelEl.value = modelEl.value.startsWith("claude") ? modelEl.value : "claude-sonnet-4-20250514";
+    if (!modelEl.value.startsWith("claude")) {
+      modelEl.value = "claude-sonnet-4-20250514";
+    }
     modelEl.placeholder = "claude-sonnet-4-20250514";
   } else {
     apiKeyLabelEl.textContent = "OpenAI API Key";
     apiKeyEl.placeholder = "sk-...";
     baseURLEl.style.display = "";
     baseURLLabelEl.style.display = "";
-    modelEl.value = modelEl.value.startsWith("claude") ? "gpt-4o" : modelEl.value;
+    if (modelEl.value.startsWith("claude")) {
+      modelEl.value = "gpt-4o";
+    }
     modelEl.placeholder = "gpt-4o";
+  }
+});
+
+// ── Test Connection ──────────────────────────────────
+
+testBtn.addEventListener("click", async () => {
+  const apiKey = apiKeyEl.value.trim();
+  if (!apiKey) {
+    apiKeyEl.focus();
+    return;
+  }
+
+  testBtn.disabled = true;
+  testBtn.textContent = "Testing...";
+  testResult.className = "test-result hidden";
+
+  const result = await window.api.testConnection({
+    provider: providerEl.value,
+    apiKey,
+    baseURL: baseURLEl.value.trim(),
+    model: modelEl.value.trim(),
+  });
+
+  testBtn.disabled = false;
+  testBtn.textContent = "Test Connection";
+
+  if (result.success) {
+    testResult.className = "test-result success";
+    testResult.textContent = "Connected: " + result.message;
+  } else {
+    testResult.className = "test-result fail";
+    testResult.textContent = "Failed: " + result.message;
   }
 });
 
@@ -127,7 +208,6 @@ window.api.onResult((result) => {
 // ── Helpers ──────────────────────────────────────────
 
 function addLog(message, type) {
-  // Remove empty placeholder
   const empty = logPanel.querySelector(".log-empty");
   if (empty) empty.remove();
 
@@ -138,7 +218,6 @@ function addLog(message, type) {
     if (type) {
       div.classList.add(type);
     } else {
-      // Auto-detect type from content
       if (line.includes("[PLAN]")) div.classList.add("plan");
       else if (line.includes("[EXEC]")) div.classList.add("exec");
       else if (line.includes("[DONE]")) div.classList.add("done");

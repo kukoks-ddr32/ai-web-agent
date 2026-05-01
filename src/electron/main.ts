@@ -1,18 +1,35 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
+import * as fs from "fs";
 import { Agent } from "../agent";
 import { AgentConfig, ProviderType } from "../types";
 
 let mainWindow: BrowserWindow | null = null;
 
+// ── Settings persistence ───────────────────────────────────────────────────
+
+const settingsPath = path.join(app.getPath("userData"), "settings.json");
+
+function loadSettings(): Record<string, string> {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      return JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    }
+  } catch {}
+  return {};
+}
+
+function saveSettings(settings: Record<string, string>): void {
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+}
+
+// ── Window ─────────────────────────────────────────────────────────────────
+
 function getRendererPath() {
-  // In dev: dist/electron/main.js → src/electron/renderer/
-  // In packaged asar: same relative path works via app.getAppPath()
   return path.join(app.getAppPath(), "src", "electron", "renderer", "index.html");
 }
 
 function getPreloadPath() {
-  // Preload is compiled alongside main.js in dist/electron/
   return path.join(__dirname, "preload.js");
 }
 
@@ -37,6 +54,48 @@ app.whenReady().then(createWindow);
 app.on("window-all-closed", () => {
   app.quit();
 });
+
+// ── IPC: Settings ──────────────────────────────────────────────────────────
+
+ipcMain.handle("load-settings", () => loadSettings());
+
+ipcMain.on("save-settings", (_event, settings) => saveSettings(settings));
+
+// ── IPC: Test Connection ───────────────────────────────────────────────────
+
+ipcMain.handle("test-connection", async (_event, config) => {
+  try {
+    const provider = (config.provider || "openai") as ProviderType;
+
+    if (provider === "anthropic") {
+      const Anthropic = require("@anthropic-ai/sdk");
+      const client = new Anthropic.default({ apiKey: config.apiKey });
+      const resp = await client.messages.create({
+        model: config.model || "claude-sonnet-4-20250514",
+        max_tokens: 10,
+        messages: [{ role: "user", content: "Say hi" }],
+      });
+      const text = resp.content.find((b: any) => b.type === "text");
+      return { success: true, message: text ? text.text.slice(0, 50) : "OK" };
+    } else {
+      const OpenAI = require("openai");
+      const client = new OpenAI.default({
+        apiKey: config.apiKey,
+        baseURL: config.baseURL || "https://api.openai.com/v1",
+      });
+      const resp = await client.chat.completions.create({
+        model: config.model || "gpt-4o",
+        max_tokens: 10,
+        messages: [{ role: "user", content: "Say hi" }],
+      });
+      return { success: true, message: resp.choices?.[0]?.message?.content?.slice(0, 50) || "OK" };
+    }
+  } catch (err: any) {
+    return { success: false, message: err.message || String(err) };
+  }
+});
+
+// ── IPC: Run Task ──────────────────────────────────────────────────────────
 
 ipcMain.on("run-task", async (_event, config) => {
   const win = mainWindow;
