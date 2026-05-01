@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+screenshots/
+*.png
+*.jpg
+.DS_Store
+.claude/
