@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';">
+  <title>AI Web Agent</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar: Settings -->
+    <aside class="sidebar">
+      <h2>Settings</h2>
+
+      <label for="provider">Provider</label>
+      <select id="provider">
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+      </select>
+
+      <label for="apiKey" id="apiKeyLabel">OpenAI API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-...">
+
+      <label for="baseURL" id="baseURLLabel">Base URL</label>
+      <input type="text" id="baseURL" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+
+      <label for="model">Model</label>
+      <input type="text" id="model" placeholder="gpt-4o" value="gpt-4o">
+
+      <div class="sidebar-footer">
+        <div class="status" id="status">Ready</div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Task Input -->
+      <div class="task-bar">
+        <input type="text" id="goalInput" placeholder="Enter your task, e.g. open Baidu and search for AI news">
+        <button id="runBtn">Start</button>
+      </div>
+
+      <!-- Log + Screenshots -->
+      <div class="content-area">
+        <div class="log-panel" id="logPanel">
+          <div class="log-empty">Logs will appear here after starting a task...</div>
+        </div>
+        <div class="screenshot-panel" id="screenshotPanel">
+          <div class="screenshot-empty">Screenshots will appear here...</div>
+          <div class="screenshot-gallery" id="screenshotGallery"></div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-bar hidden" id="resultBar">
+        <span class="result-icon" id="resultIcon"></span>
+        <span class="result-text" id="resultText"></span>
+      </div>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

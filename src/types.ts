@@ -61,6 +61,14 @@ export type AgentAction =
   | ScrollAction
   | DoneAction;
 
+// ── LLM Provider ─────────────────────────────────────────────────────────────
+
+export type ProviderType = "openai" | "anthropic";
+
+export interface LLMProvider {
+  chat(system: string, user: string, maxTokens: number): Promise<string>;
+}
+
 // ── Planner ──────────────────────────────────────────────────────────────────
 
 export interface PlanResponse {
@@ -100,11 +108,13 @@ export interface StepResult {
 // ── Agent ────────────────────────────────────────────────────────────────────
 
 export interface AgentConfig {
+  provider: ProviderType;
   maxSteps: number;
   headless: boolean;
   model: string;
   apiKey: string;
   baseURL: string;
+  anthropicApiKey?: string;
   screenshotDir?: string;
   verbose: boolean;
 }
@@ -116,4 +126,11 @@ export interface AgentRunResult {
   extractedData: string[];
   totalSteps: number;
   error?: string;
+}
+
+export interface AgentEvents {
+  onLog?: (message: string) => void;
+  onScreenshot?: (stepNumber: number, base64: string) => void;
+  onStep?: (stepNumber: number, result: StepResult) => void;
+  onResult?: (result: AgentRunResult) => void;
 }

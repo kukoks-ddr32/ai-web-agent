@@ -1,12 +1,37 @@
 {
   "name": "ai-web-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AI-powered web automation framework using Playwright + LLM",
-  "main": "dist/index.js",
+  "main": "dist/electron/main.js",
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "electron:dev": "tsc && electron .",
+    "electron:build": "tsc && cross-env ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ electron-builder --win",
+    "electron:build:portable": "tsc && cross-env ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.ai-web-agent.app",
+    "productName": "AI Web Agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/electron/renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -16,6 +41,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "cross-env": "^10.1.0",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
   }

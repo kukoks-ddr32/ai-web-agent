@@ -1,10 +1,12 @@
-import { chromium, Browser, Page } from "playwright";
+import { chromium, Browser } from "playwright";
 import { Planner } from "./planner";
 import { Executor } from "./executor";
 import { Observer } from "./observer";
 import { SafetyGuard } from "./safety";
+import { createProvider } from "./providers";
 import {
   AgentConfig,
+  AgentEvents,
   AgentRunResult,
   PageObservation,
   StepResult,
@@ -23,11 +25,13 @@ export class Agent {
   private config: AgentConfig;
   private planner: Planner;
   private safety: SafetyGuard;
+  private events: AgentEvents;
 
-  constructor(config: AgentConfig) {
+  constructor(config: AgentConfig, events?: AgentEvents) {
     this.config = config;
-    this.planner = new Planner(config.apiKey, config.baseURL, config.model);
+    this.planner = new Planner(createProvider(config));
     this.safety = new SafetyGuard(config);
+    this.events = events || {};
   }
 
   async run(goal: string): Promise<AgentRunResult> {
@@ -55,7 +59,7 @@ export class Agent {
         const safetyError = this.safety.check(stepNumber);
         if (safetyError) {
           this.log(`[SAFETY] ${safetyError}`);
-          return {
+          const result: AgentRunResult = {
             success: false,
             steps,
             summary: safetyError,
@@ -63,6 +67,8 @@ export class Agent {
             totalSteps: stepNumber,
             error: safetyError,
           };
+          if (this.events.onResult) this.events.onResult(result);
+          return result;
         }
 
         // ── Plan ─────────────────────────────────────────────────────
@@ -87,13 +93,15 @@ export class Agent {
           if (action.action === "done") {
             this.log(`[DONE] ${action.summary}`);
             if (action.extractedData) extractedData.push(action.extractedData);
-            return {
+            const result: AgentRunResult = {
               success: true,
               steps,
               summary: action.summary,
               extractedData,
               totalSteps: stepNumber,
             };
+            if (this.events.onResult) this.events.onResult(result);
+            return result;
           }
 
           // Execute
@@ -121,6 +129,14 @@ export class Agent {
             this.log(`[ERROR] ${result.error}`);
           }
 
+          // Emit step event
+          if (this.events.onStep) {
+            this.events.onStep(stepNumber, result);
+          }
+          if (this.events.onScreenshot) {
+            this.events.onScreenshot(stepNumber, result.observation.screenshotBase64);
+          }
+
           // Save screenshot if configured
           if (this.config.screenshotDir) {
             const fs = require("fs");
@@ -140,7 +156,7 @@ export class Agent {
     } catch (e: any) {
       const errMsg = e.message || String(e);
       this.log(`[FATAL] ${errMsg}`);
-      return {
+      const result: AgentRunResult = {
         success: false,
         steps,
         summary: `Agent crashed: ${errMsg}`,
@@ -148,13 +164,17 @@ export class Agent {
         totalSteps: steps.length,
         error: errMsg,
       };
+      if (this.events.onResult) this.events.onResult(result);
+      return result;
     } finally {
       if (browser) await browser.close();
     }
   }
 
   private log(msg: string): void {
-    if (this.config.verbose) {
+    if (this.events.onLog) {
+      this.events.onLog(msg);
+    } else if (this.config.verbose) {
       console.log(msg);
     }
   }

@@ -1,10 +1,31 @@
 import * as dotenv from "dotenv";
 import { Agent } from "./agent";
-import { AgentConfig } from "./types";
+import { AgentConfig, ProviderType } from "./types";
 
 dotenv.config();
 
 function getConfig(): AgentConfig {
+  const provider = (process.env.PROVIDER || "openai") as ProviderType;
+
+  if (provider === "anthropic") {
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      console.error("Error: ANTHROPIC_API_KEY not set. Copy .env.example → .env and add your key.");
+      process.exit(1);
+    }
+    return {
+      provider,
+      apiKey: "",
+      baseURL: "",
+      anthropicApiKey,
+      model: process.env.MODEL_NAME || "claude-sonnet-4-20250514",
+      maxSteps: parseInt(process.env.MAX_STEPS || "15", 10),
+      headless: process.env.HEADLESS === "true",
+      screenshotDir: process.env.SCREENSHOT_DIR || undefined,
+      verbose: true,
+    };
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error("Error: OPENAI_API_KEY not set. Copy .env.example → .env and add your key.");
@@ -12,6 +33,7 @@ function getConfig(): AgentConfig {
   }
 
   return {
+    provider,
     apiKey,
     baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
     model: process.env.MODEL_NAME || "gpt-4o",
@@ -31,6 +53,7 @@ async function main() {
   console.log(`Goal: ${goal}\n`);
 
   const config = getConfig();
+  console.log(`Provider: ${config.provider} | Model: ${config.model}\n`);
   const agent = new Agent(config);
   const result = await agent.run(goal);
 

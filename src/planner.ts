@@ -1,21 +1,18 @@
-import OpenAI from "openai";
 import {
-  AgentAction,
+  LLMProvider,
   PageObservation,
   PlanResponse,
 } from "./types";
 
 /**
- * Planner: uses an OpenAI-compatible LLM to decide the next actions
+ * Planner: uses an LLM provider to decide the next actions
  * given the user's goal and the current page observation.
  */
 export class Planner {
-  private client: OpenAI;
-  private model: string;
+  private provider: LLMProvider;
 
-  constructor(apiKey: string, baseURL: string, model: string) {
-    this.client = new OpenAI({ apiKey, baseURL });
-    this.model = model;
+  constructor(provider: LLMProvider) {
+    this.provider = provider;
   }
 
   async plan(
@@ -32,16 +29,9 @@ export class Planner {
       stepNumber
     );
 
-    let response: any;
+    let text: string;
     try {
-      response = await this.client.chat.completions.create({
-        model: this.model,
-        max_tokens: 2048,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      });
+      text = await this.provider.chat(systemPrompt, userPrompt, 2048);
     } catch (err: any) {
       console.error("[PLANNER] API call failed:", err.message || err);
       return {
@@ -50,13 +40,8 @@ export class Planner {
       };
     }
 
-    // Some API relays return a raw string instead of a parsed object
-    if (typeof response === "string") {
-      try { response = JSON.parse(response); } catch {}
-    }
-    const text = response?.choices?.[0]?.message?.content ?? "";
     if (!text) {
-      console.error("[PLANNER] Empty content. Response:", JSON.stringify(response).slice(0, 500));
+      console.error("[PLANNER] Empty response from provider");
     }
     return this.parseResponse(text);
   }
